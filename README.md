@@ -1,5 +1,7 @@
 # Generador de Datos Sintéticos para Microsoft Fabric
 
+📖 [English version available](README-EN.md)
+
 Dos notebooks para Microsoft Fabric que trabajan en secuencia:
 
 1. **`GeneradorDatosSinteticosPD.ipynb`** — Genera datasets sintéticos desde configuraciones YAML y los escribe como Parquet en el Lakehouse.

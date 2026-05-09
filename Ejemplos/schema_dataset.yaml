@@ -1,0 +1,87 @@
+# YAMALE SCHEMA: Validación de archivos de configuración FASE 1
+#
+# Propósito: Validar estructura y tipos de datos de los YAMLs de generación
+# Uso: yamale -d schema_dataset.yaml <archivo.yml>
+# Instalar: pip install yamale
+
+dataset: include('dataset_schema')
+
+---
+
+dataset_schema:
+  name: str(required=True)
+  description: str(required=True)
+  rows: int(required=False, min=1)           # Opcional: requerido si no hay source_parquet
+  source_parquet: str(required=False)         # V5: alternativa a rows para datasets históricos
+  change_generation: map(required=False)      # V5: parámetros de generación histórica
+  schema: str(required=True)
+  output: str(required=True)
+  columns: list(include('column_schema'), required=True, min=1)
+
+---
+
+column_schema:
+  name: str(required=True)
+  type: enum('int', 'string', 'decimal', 'bool', 'date', 'datetime', required=True)
+  description: str(required=False)
+  sequence: include('sequence_schema') | null()
+  template: str() | null()
+  faker: str() | null()
+  values: list(any()) | null()
+  weighted_values: list(include('weighted_value_schema')) | null()
+  range: list(any(), min=2, max=2) | null()
+  conditional: include('conditional_schema') | null()
+  calculated: include('calculated_schema') | null()
+  fk: include('fk_schema') | null()
+  true_ratio: num(min=0, max=1) | null()
+  nullable: num(min=0, max=1) | null()
+  from_source: str() | null()
+  variation: list(num(), min=2, max=2) | null()
+  change_probability: num(min=0, max=1) | null()
+
+---
+
+sequence_schema:
+  start: int()
+  step: int()
+
+---
+
+weighted_value_schema:
+  value: any()
+  weight: num(min=0, max=1)
+  description: str(required=False)
+
+---
+
+conditional_schema:
+  based_on: str() | list(str())
+  mappings: map()
+
+---
+
+calculated_schema:
+  based_on: str() | list(str())
+  formula: str(required=True)
+  precision: int() | null()
+  note: str() | null()
+
+---
+
+fk_schema:
+  source: str(required=True)
+  column: str(required=True)
+  reference_column: str(required=False)
+  description: str(required=False)
+
+---
+
+# Notas de validación:
+# - "dataset" es la clave raíz obligatoria
+# - "columns" debe ser una lista no vacía
+# - "type" debe ser uno de: int, string, decimal, bool, date, datetime
+# - Cada columna puede tener UNO de: sequence, template, faker, values, weighted_values, range, conditional, calculated, fk
+# - weighted_values: sum de weights NO debe validarse aquí (se valida en script Python)
+# - conditional: mappings debe ser un dict con valores como listas de opciones
+# - calculated: formula debe ser código Python válido (se valida en script Python)
+# - fk: source es ruta a parquet, column es el FK reference column

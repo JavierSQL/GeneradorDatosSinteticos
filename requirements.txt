@@ -1,0 +1,9 @@
+# Dependencias del Generador de Datos Sintéticos
+# Nota: PySpark y pandas son provistos por el ambiente de Microsoft Fabric.
+# Solo instalar lo que falte con: %pip install -r requirements.txt
+
+faker>=19.0.0
+faker-commerce>=1.0.2    # Opcional: para el generador faker: commerce.product_name
+pyyaml>=6.0
+yamale>=4.0.0            # Opcional: para validar YAMLs con schema_dataset.yaml
+tqdm>=4.66.0

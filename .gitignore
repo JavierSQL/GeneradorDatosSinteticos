@@ -1,0 +1,26 @@
+# Archivos generados (parquets de salida)
+Files/
+
+# YAMLs del libro — no van en el repo público
+Ejemplos/libro/
+
+# Archivos de trabajo internos
+*_V200.ipynb
+*_V[0-9]*.ipynb
+
+# Documentos de revisión interna
+REVIEW.md
+CODE_REVIEW.md
+EDGE_CASES.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Entornos virtuales
+.env
+.venv/
+*.egg-info/
+dist/

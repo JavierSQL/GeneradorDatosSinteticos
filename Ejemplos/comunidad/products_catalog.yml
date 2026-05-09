@@ -1,0 +1,123 @@
+# YAML: products_catalog.yml
+# Descripción: Catálogo de productos e-commerce — ejemplo intermedio
+# Dominio: E-commerce / Retail
+# Complejidad: Intermedia
+#
+# Generadores que demuestra:
+#   sequence    → ProductID autoincremental
+#   template    → SKU con formato "PROD-0001"
+#   faker       → nombre de producto y marca (requiere faker-commerce para product_name)
+#   values      → categorías fijas
+#   range       → precios y stock en rango
+#   calculated  → CostPrice (% del ListPrice) y GrossMarginPct (fórmula de margen)
+#   bool        → IsAvailable con probabilidad
+
+dataset:
+  name: products_catalog
+  description: "Catálogo de 300 productos — demuestra template y calculated"
+  rows: 300
+  schema: Ecommerce
+  output: "Files/Data/Ecommerce"
+  columns:
+    # ------------------------------------------------------------------
+    # SECCIÓN 1: Identificadores
+    # ------------------------------------------------------------------
+    - name: ProductID
+      type: int
+      description: "Clave sustituta del producto"
+      sequence:
+        start: 1
+        step: 1
+
+    - name: SKU
+      type: string
+      description: "Código de producto con formato PROD-NNNN (template)"
+      template: "PROD-{sequence:04d}"
+      sequence:
+        start: 1
+        step: 1
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 2: Atributos del producto
+    # ------------------------------------------------------------------
+    - name: ProductName
+      type: string
+      description: "Nombre de producto (faker-commerce si está instalado, sino word)"
+      faker: commerce.product_name
+      # Si faker-commerce no está instalado, reemplazar por:
+      # faker: word
+
+    - name: Category
+      type: string
+      description: "Categoría del producto"
+      values:
+        - "Electronics"
+        - "Clothing"
+        - "Home & Garden"
+        - "Sports"
+        - "Books"
+        - "Food & Beverage"
+
+    - name: Brand
+      type: string
+      description: "Marca del producto"
+      faker: company
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 3: Precios y márgenes (calculated)
+    # ------------------------------------------------------------------
+    - name: ListPrice
+      type: decimal
+      description: "Precio de lista al público (USD)"
+      range:
+        - 5.99
+        - 999.99
+
+    - name: CostPrice
+      type: decimal
+      description: "Costo de adquisición (35–70% del ListPrice)"
+      calculated:
+        based_on: "ListPrice"
+        formula: "float(ListPrice) * random.uniform(0.35, 0.70)"
+        precision: 2
+
+    - name: GrossMarginPct
+      type: decimal
+      description: "Margen bruto en % — (ListPrice - CostPrice) / ListPrice * 100"
+      calculated:
+        based_on: ["ListPrice", "CostPrice"]
+        formula: "round((float(ListPrice) - float(CostPrice)) / float(ListPrice) * 100, 1)"
+        precision: 1
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 4: Inventario
+    # ------------------------------------------------------------------
+    - name: StockQuantity
+      type: int
+      description: "Unidades en inventario"
+      range:
+        - 0
+        - 500
+
+    - name: IsAvailable
+      type: bool
+      description: "Producto disponible para venta (85% activos)"
+      true_ratio: 0.85
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 5: Metadata
+    # ------------------------------------------------------------------
+    - name: LoadDate
+      type: date
+      description: "Fecha de carga"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, template, faker, values, range, calculated, bool"
+  - "STANDALONE: No depende de otros datasets"
+  - "CALCULATED: CostPrice se calcula en Pass 2 usando ListPrice ya generado en Pass 1"
+  - "CALCULATED: GrossMarginPct depende de ListPrice Y CostPrice — ambos deben estar antes en el YAML"
+  - "RANGO ESPERADO: GrossMarginPct entre ~30% y ~65%"
+  - "faker-commerce: Si no está instalado, reemplazar 'commerce.product_name' por 'word'"

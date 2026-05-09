@@ -1,0 +1,126 @@
+# YAML: employees.yml
+# Descripción: Directorio de empleados — ejemplo introductorio
+# Dominio: Recursos Humanos (universalmente reconocible)
+# Complejidad: Básica
+#
+# Generadores que demuestra:
+#   sequence       → EmployeeID autoincremental
+#   faker          → nombres, emails, teléfonos realistas
+#   values         → lista fija de departamentos
+#   conditional    → JobTitle depende del Department
+#   range          → fechas y salarios en rango
+#   bool           → IsActive con probabilidad configurable
+#   weighted_values → EmploymentType con distribución realista
+#   nullable       → Phone (15% sin teléfono registrado)
+
+dataset:
+  name: employees
+  description: "Directorio de empleados con 500 registros — cubre los generadores fundamentales"
+  rows: 500
+  schema: HR
+  output: "Files/Data/HR"
+  columns:
+    # ------------------------------------------------------------------
+    # SECCIÓN 1: Identificadores
+    # ------------------------------------------------------------------
+    - name: EmployeeID
+      type: int
+      description: "Clave sustituta del empleado"
+      sequence:
+        start: 1
+        step: 1
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 2: Datos personales (Faker)
+    # ------------------------------------------------------------------
+    - name: FullName
+      type: string
+      description: "Nombre completo generado con Faker"
+      faker: name
+
+    - name: Email
+      type: string
+      description: "Email corporativo generado con Faker"
+      faker: email
+
+    - name: Phone
+      type: string
+      description: "Teléfono de contacto (nullable: 15% sin registro)"
+      faker: phone_number
+      nullable: 0.15
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 3: Organización
+    # ------------------------------------------------------------------
+    - name: Department
+      type: string
+      description: "Departamento del empleado"
+      values:
+        - "Engineering"
+        - "Marketing"
+        - "Sales"
+        - "Finance"
+        - "HR"
+        - "Operations"
+
+    - name: JobTitle
+      type: string
+      description: "Cargo dentro del departamento (condicional)"
+      conditional:
+        based_on: Department
+        mappings:
+          "Engineering":  ["Software Engineer", "Data Engineer", "DevOps Engineer", "QA Engineer"]
+          "Marketing":    ["Marketing Manager", "Content Creator", "SEO Specialist", "Brand Analyst"]
+          "Sales":        ["Account Executive", "Sales Manager", "Business Development Rep"]
+          "Finance":      ["Accountant", "Financial Analyst", "Controller", "Audit Specialist"]
+          "HR":           ["HR Manager", "Recruiter", "HR Business Partner", "Compensation Analyst"]
+          "Operations":   ["Operations Manager", "Logistics Coordinator", "Process Analyst"]
+
+    - name: EmploymentType
+      type: string
+      description: "Tipo de contrato con distribución realista"
+      weighted_values:
+        - value: "Full-Time"
+          weight: 0.75
+        - value: "Part-Time"
+          weight: 0.15
+        - value: "Contractor"
+          weight: 0.10
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 4: Fechas y compensación
+    # ------------------------------------------------------------------
+    - name: HireDate
+      type: date
+      description: "Fecha de contratación"
+      range:
+        - "2018-01-01"
+        - "2024-12-31"
+
+    - name: BaseSalary
+      type: int
+      description: "Salario base anual (USD)"
+      range:
+        - 40000
+        - 150000
+
+    - name: IsActive
+      type: bool
+      description: "Empleado activo (92% activos, 8% inactivos)"
+      true_ratio: 0.92
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 5: Metadata
+    # ------------------------------------------------------------------
+    - name: LoadDate
+      type: date
+      description: "Fecha de carga"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, faker, values, conditional, range, bool, weighted_values, nullable"
+  - "STANDALONE: No depende de otros datasets"
+  - "LOCALE: Ajustar FAKER_LOCALE en Celda 2 para nombres en otro idioma"
+  - "JobTitle depende de Department — el motor resuelve esto en Pass 2 (columnas condicionales)"

@@ -1,0 +1,146 @@
+# YAML: support_tickets.yml
+# Descripción: Tickets de soporte al cliente — ejemplo intermedio
+# Dominio: SaaS / Customer Service
+# Complejidad: Intermedia
+#
+# Generadores que demuestra:
+#   sequence        → TicketID desde 1000
+#   faker           → nombres y emails de clientes y agentes
+#   values          → categorías de ticket
+#   conditional     → Priority depende de Category (cada tipo tiene prioridades propias)
+#   weighted_values → Status con distribución realista (mayoría resueltos)
+#   range           → fechas de creación y resolución
+#   nullable        → ResolvedDate, SatisfactionScore y ResolutionNotes (tickets abiertos)
+
+dataset:
+  name: support_tickets
+  description: "1000 tickets de soporte — demuestra nullable y conditional sobre weighted_values"
+  rows: 1000
+  schema: CustomerService
+  output: "Files/Data/CustomerService"
+  columns:
+    # ------------------------------------------------------------------
+    # SECCIÓN 1: Identificadores
+    # ------------------------------------------------------------------
+    - name: TicketID
+      type: int
+      description: "Número de ticket (empieza en 1000)"
+      sequence:
+        start: 1000
+        step: 1
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 2: Datos del cliente
+    # ------------------------------------------------------------------
+    - name: CustomerName
+      type: string
+      description: "Nombre del cliente"
+      faker: name
+
+    - name: CustomerEmail
+      type: string
+      description: "Email del cliente"
+      faker: email
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 3: Clasificación del ticket
+    # ------------------------------------------------------------------
+    - name: Category
+      type: string
+      description: "Categoría del problema reportado"
+      values:
+        - "Billing"
+        - "Technical"
+        - "Shipping"
+        - "Account"
+        - "Returns"
+
+    - name: Priority
+      type: string
+      description: "Prioridad según categoría (condicional)"
+      conditional:
+        based_on: Category
+        mappings:
+          "Billing":    ["High", "Critical"]
+          "Technical":  ["Medium", "High", "Critical"]
+          "Shipping":   ["Low", "Medium"]
+          "Account":    ["Low", "Medium"]
+          "Returns":    ["Low", "Medium", "High"]
+
+    - name: Status
+      type: string
+      description: "Estado del ticket con distribución realista"
+      weighted_values:
+        - value: "Open"
+          weight: 0.20
+          description: "Ticket recibido, sin asignar"
+        - value: "In Progress"
+          weight: 0.15
+          description: "Agente trabajando en el ticket"
+        - value: "Resolved"
+          weight: 0.55
+          description: "Solución aplicada, pendiente confirmación"
+        - value: "Closed"
+          weight: 0.10
+          description: "Cerrado y confirmado por el cliente"
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 4: Agente asignado
+    # ------------------------------------------------------------------
+    - name: AgentName
+      type: string
+      description: "Nombre del agente de soporte asignado"
+      faker: name
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 5: Fechas (nullable para tickets abiertos)
+    # ------------------------------------------------------------------
+    - name: CreatedDate
+      type: date
+      description: "Fecha de apertura del ticket"
+      range:
+        - "2024-01-01"
+        - "2025-03-31"
+
+    - name: ResolvedDate
+      type: date
+      description: "Fecha de resolución (NULL si el ticket sigue abierto — 35%)"
+      nullable: 0.35
+      range:
+        - "2024-01-02"
+        - "2025-04-30"
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 6: Satisfacción (nullable — solo tickets cerrados responden)
+    # ------------------------------------------------------------------
+    - name: SatisfactionScore
+      type: int
+      description: "Puntuación de satisfacción 1–5 (NULL si no respondió — 40%)"
+      nullable: 0.40
+      range:
+        - 1
+        - 5
+
+    - name: ResolutionNotes
+      type: string
+      description: "Notas de resolución (NULL para tickets sin cerrar — 35%)"
+      nullable: 0.35
+      faker: sentence
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 7: Metadata
+    # ------------------------------------------------------------------
+    - name: LoadDate
+      type: date
+      description: "Fecha de carga"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, faker, values, conditional, weighted_values, range, nullable"
+  - "STANDALONE: No depende de otros datasets"
+  - "NULLABLE: ~35% de ResolvedDate son NULL (tickets Open o In Progress sin resolver)"
+  - "NULLABLE: ~40% de SatisfactionScore son NULL (clientes que no respondieron la encuesta)"
+  - "CONDITIONAL: Priority tiene opciones distintas por Category — Billing solo High/Critical"
+  - "ORDEN IMPORTANTE: Category debe estar antes que Priority en el YAML (dependencia Pass 2)"

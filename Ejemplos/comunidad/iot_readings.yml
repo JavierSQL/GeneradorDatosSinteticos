@@ -1,0 +1,148 @@
+# YAML: iot_readings.yml
+# Descripción: Lecturas de sensores IoT — ejemplo avanzado en dominio no empresarial
+# Dominio: IoT / Industria / Time Series
+# Complejidad: Avanzada
+#
+# Generadores que demuestra:
+#   sequence        → ReadingID autoincremental
+#   values          → SensorID y Location desde listas fijas
+#   range           → Temperatura, Humedad, Presión y Batería en rangos físicos realistas
+#   calculated      → HeatIndex derivado de Temperature + Humidity (fórmula real)
+#   weighted_values → AlertLevel con distribución de eventos (mayoría normales)
+#
+# Nota sobre HeatIndex:
+#   Basado en la simplificación de Steadman (1979):
+#   HeatIndex ≈ Temperature + 0.33 * Humidity - 4.0
+#   Válida para temperatura > 27°C y humedad > 40%.
+#   Para datasets educativos la aproximación es suficiente.
+
+dataset:
+  name: iot_readings
+  description: "10000 lecturas de sensores ambientales — demuestra calculated con fórmula física real"
+  rows: 10000
+  schema: IoT
+  output: "Files/Data/IoT"
+  columns:
+    # ------------------------------------------------------------------
+    # SECCIÓN 1: Identificadores
+    # ------------------------------------------------------------------
+    - name: ReadingID
+      type: int
+      description: "ID secuencial de la lectura"
+      sequence:
+        start: 1
+        step: 1
+
+    - name: SensorID
+      type: string
+      description: "Identificador del sensor (10 sensores distintos)"
+      values:
+        - "SENSOR-001"
+        - "SENSOR-002"
+        - "SENSOR-003"
+        - "SENSOR-004"
+        - "SENSOR-005"
+        - "SENSOR-006"
+        - "SENSOR-007"
+        - "SENSOR-008"
+        - "SENSOR-009"
+        - "SENSOR-010"
+
+    - name: Location
+      type: string
+      description: "Ubicación física del sensor"
+      values:
+        - "Warehouse A"
+        - "Warehouse B"
+        - "Factory Floor 1"
+        - "Factory Floor 2"
+        - "Cold Storage"
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 2: Timestamp
+    # ------------------------------------------------------------------
+    - name: ReadingDate
+      type: date
+      description: "Fecha de la lectura (año 2024)"
+      range:
+        - "2024-01-01"
+        - "2024-12-31"
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 3: Mediciones ambientales
+    # ------------------------------------------------------------------
+    - name: Temperature
+      type: decimal
+      description: "Temperatura en °C (rango típico industrial)"
+      range:
+        - 15.0
+        - 42.0
+
+    - name: Humidity
+      type: decimal
+      description: "Humedad relativa en % (rango típico industrial)"
+      range:
+        - 20.0
+        - 90.0
+
+    - name: Pressure
+      type: decimal
+      description: "Presión atmosférica en hPa"
+      range:
+        - 980.0
+        - 1050.0
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 4: Métricas derivadas (calculated)
+    # ------------------------------------------------------------------
+    - name: HeatIndex
+      type: decimal
+      description: "Índice de calor percibido (°C) — Steadman 1979 simplificado"
+      calculated:
+        based_on: ["Temperature", "Humidity"]
+        formula: "round(float(Temperature) + 0.33 * float(Humidity) - 4.0, 1)"
+        precision: 1
+        note: "HI = T + 0.33*H - 4.0 | Válido para T > 27°C, H > 40%"
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 5: Estado y alertas
+    # ------------------------------------------------------------------
+    - name: AlertLevel
+      type: string
+      description: "Nivel de alerta del sensor (distribución realista: mayoría normales)"
+      weighted_values:
+        - value: "Normal"
+          weight: 0.85
+          description: "Todos los parámetros dentro de rango"
+        - value: "Warning"
+          weight: 0.12
+          description: "Uno o más parámetros cerca del límite"
+        - value: "Critical"
+          weight: 0.03
+          description: "Parámetros fuera de rango — requiere acción"
+
+    - name: BatteryLevel
+      type: int
+      description: "Nivel de batería del sensor en % (1–100)"
+      range:
+        - 1
+        - 100
+
+    # ------------------------------------------------------------------
+    # SECCIÓN 6: Metadata
+    # ------------------------------------------------------------------
+    - name: LoadDate
+      type: date
+      description: "Fecha de ingestión"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, values, range, calculated, weighted_values"
+  - "STANDALONE: No depende de otros datasets"
+  - "DOMINIO: IoT industrial — mismo motor, distinto dominio al retail"
+  - "CALCULATED: HeatIndex depende de Temperature y Humidity — ambas deben precederlo en el YAML"
+  - "DISTRIBUCIÓN ESPERADA: ~85% Normal | ~12% Warning | ~3% Critical en AlertLevel"
+  - "VOLUMEN: 10000 filas para simular un stream de datos de sensores"
+  - "FÓRMULA HeatIndex: Simplificación de Steadman (1979) — adecuada para uso educativo"

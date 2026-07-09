@@ -127,6 +127,20 @@ YAML_FILES         = [
 
 Ejecuta todas las celdas. Cada Parquet queda registrado como `{schema}.{nombre}` en el Lakehouse.
 
+> ⚠️ **El schema de destino debe existir antes de ejecutar.** Si usas un schema distinto de `dbo` (ya sea en `DESTINATION_SCHEMA` o en el campo `schema` de algún YAML), créalo primero en el Lakehouse; de lo contrario la carga falla. Puedes crearlo con SQL desde el SQL analytics endpoint del Lakehouse:
+>
+> ```sql
+> CREATE SCHEMA MiSchema;
+> ```
+>
+> o desde una celda del notebook con Spark SQL:
+>
+> ```python
+> spark.sql("CREATE SCHEMA IF NOT EXISTS MiSchema")
+> ```
+>
+> El schema `dbo` existe por defecto, así que este paso solo aplica si usas otro.
+
 ---
 
 ## Generadores disponibles

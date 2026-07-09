@@ -127,6 +127,20 @@ YAML_FILES         = [
 
 Run all cells. Each Parquet file is registered as `{schema}.{name}` in the Lakehouse.
 
+> ⚠️ **The destination schema must exist before you run.** If you use a schema other than `dbo` (either in `DESTINATION_SCHEMA` or in a YAML's `schema` field), create it first in the Lakehouse; otherwise the load fails. You can create it with SQL from the Lakehouse SQL analytics endpoint:
+>
+> ```sql
+> CREATE SCHEMA MySchema;
+> ```
+>
+> or from a notebook cell with Spark SQL:
+>
+> ```python
+> spark.sql("CREATE SCHEMA IF NOT EXISTS MySchema")
+> ```
+>
+> The `dbo` schema exists by default, so this step only applies if you use a different one.
+
 ---
 
 ## Available generators

@@ -1,0 +1,124 @@
+# =====================================================================
+# La Posada del Lago — 01 · fechas (dimensión calendario)
+# Grano: un día. Cubre 2024-01-01 → 2026-12-31 (1096 días, incl. 2024 bisiesto).
+# ORDEN DE GENERACIÓN: primero (no depende de nadie).
+#
+# Notas de motor:
+#   - 'rows' DEBE ser exactamente el número de días del rango (1096).
+#   - Fecha/DateKey se derivan con calculated a partir de OffsetDia (sequence 0..1095).
+#   - NombreMes/NombreDia por índice de lista literal (strftime NO corre en el sandbox).
+#   - EsFinDeSemana es flag int 0/1 (un bool calculado sería atrapado por la rama bool).
+# =====================================================================
+dataset:
+  name: fechas
+  description: "Dimensión calendario diaria 2024-2026 para análisis temporal (role-playing en reservas)"
+  rows: 1096
+  schema: PosadaDelLago
+  output: "Files/Data/PosadaDelLago/fechas"
+  columns:
+    - name: OffsetDia
+      type: int
+      description: "Auxiliar: días desde la fecha base (0..1095). Base del cálculo."
+      sequence:
+        start: 0
+        step: 1
+
+    - name: Fecha
+      type: date
+      description: "Fecha real = 2024-01-01 + OffsetDia días"
+      calculated:
+        based_on: "OffsetDia"
+        formula: "date(2024, 1, 1) + timedelta(days=int(OffsetDia))"
+
+    - name: DateKey
+      type: int
+      description: "Clave entera yyyymmdd (PK). Calza con los *DateKey de los hechos."
+      calculated:
+        based_on: "Fecha"
+        formula: "Fecha.year * 10000 + Fecha.month * 100 + Fecha.day"
+
+    - name: Anio
+      type: int
+      description: "Año"
+      calculated:
+        based_on: "Fecha"
+        formula: "Fecha.year"
+
+    - name: Mes
+      type: int
+      description: "Número de mes (1-12)"
+      calculated:
+        based_on: "Fecha"
+        formula: "Fecha.month"
+
+    - name: Temporada
+      type: string
+      description: "Temporada turística: Alta (dic-abr) / Baja (resto). Forzada por mes."
+      conditional:
+        based_on: Mes
+        mappings:
+          1:  ["Alta"]
+          2:  ["Alta"]
+          3:  ["Alta"]
+          4:  ["Alta"]
+          5:  ["Baja"]
+          6:  ["Baja"]
+          7:  ["Baja"]
+          8:  ["Baja"]
+          9:  ["Baja"]
+          10: ["Baja"]
+          11: ["Baja"]
+          12: ["Alta"]
+
+    - name: Dia
+      type: int
+      description: "Día del mes (1-31)"
+      calculated:
+        based_on: "Fecha"
+        formula: "Fecha.day"
+
+    - name: NombreMes
+      type: string
+      description: "Nombre del mes en español (por índice de lista)"
+      calculated:
+        based_on: "Fecha"
+        formula: '["", "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"][Fecha.month]'
+
+    - name: NombreDia
+      type: string
+      description: "Nombre del día en español (weekday: 0=lunes)"
+      calculated:
+        based_on: "Fecha"
+        formula: '["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][Fecha.weekday()]'
+
+    - name: Trimestre
+      type: int
+      description: "Trimestre del año (1-4)"
+      calculated:
+        based_on: "Fecha"
+        formula: "(Fecha.month - 1) // 3 + 1"
+
+    - name: EsFinDeSemana
+      type: int
+      description: "Flag 1 si es sábado/domingo, 0 si no"
+      calculated:
+        based_on: "Fecha"
+        formula: "1 if Fecha.weekday() >= 5 else 0"
+
+    - name: EsFeriado
+      type: bool
+      description: "Feriado aproximado (~4% de los días). No calza con feriados reales."
+      true_ratio: 0.04
+
+    - name: FechaCarga
+      type: date
+      description: "Fecha de carga (metadata)"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, calculated, conditional, bool, range"
+  - "STANDALONE: no depende de otros datasets. Generar PRIMERO."
+  - "rows=1096 = días entre 2024-01-01 y 2026-12-31 inclusive."
+  - "Temporada va DESPUÉS de Mes en el YAML (conditional depende de columna calculada)."

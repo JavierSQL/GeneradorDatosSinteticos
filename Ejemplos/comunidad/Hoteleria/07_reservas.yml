@@ -1,0 +1,173 @@
+# =====================================================================
+# La Posada del Lago — 07 · reservas (HECHO CENTRAL)
+# Grano: una reserva/estadía.
+# DEPENDE DE: huespedes, habitaciones, canales (deben generarse antes).
+#
+# Mecánica de fechas (sin funciones de clamp en el sandbox):
+#   FechaEntrada se ancla a 2024-04-01..2026-09-30 (ventana INTERIOR al calendario 2024-2026).
+#   Así FechaReserva (= entrada - anticipación 0..90) y FechaSalida (= entrada + noches 1..14)
+#   caen SIEMPRE dentro del calendario 'fechas', y sus *DateKey existen.
+# Orden Pass 2 (respetar en el YAML):
+#   FechaReserva/FechaSalida → *DateKey → MontoHabitacion → Descuento → MontoTotalHospedaje.
+# =====================================================================
+dataset:
+  name: reservas
+  description: "8000 reservas — hecho central; FK a huésped/habitación/canal + fechas role-playing"
+  rows: 8000
+  schema: PosadaDelLago
+  output: "Files/Data/PosadaDelLago/reservas"
+  columns:
+    - name: IdReserva
+      type: int
+      description: "Clave de la reserva (PK). También dimensión degenerada en consumos/reseñas."
+      sequence:
+        start: 1000
+        step: 1
+
+    - name: IdHuesped
+      type: int
+      description: "FK → huespedes.IdHuesped"
+      fk:
+        source: "Files/Data/PosadaDelLago/huespedes/huespedes.parquet"
+        column: IdHuesped
+
+    - name: IdHabitacion
+      type: int
+      description: "FK → habitaciones.IdHabitacion"
+      fk:
+        source: "Files/Data/PosadaDelLago/habitaciones/habitaciones.parquet"
+        column: IdHabitacion
+
+    - name: IdCanal
+      type: int
+      description: "FK → canales.IdCanal"
+      fk:
+        source: "Files/Data/PosadaDelLago/canales/canales.parquet"
+        column: IdCanal
+
+    - name: FechaEntrada
+      type: date
+      description: "Check-in. Ventana interior para que las derivadas no salgan del calendario."
+      range:
+        - "2024-04-01"
+        - "2026-09-30"
+
+    - name: Noches
+      type: int
+      description: "Noches de estadía (1-14)"
+      range:
+        - 1
+        - 14
+
+    - name: DiasAnticipacion
+      type: int
+      description: "Días entre reserva y llegada (0-90)"
+      range:
+        - 0
+        - 90
+
+    - name: NumeroHuespedes
+      type: int
+      description: "Personas en la reserva (1-4)"
+      range:
+        - 1
+        - 4
+
+    - name: TarifaNoche
+      type: decimal
+      description: "Tarifa aplicada por noche en USD (rango plausible; NO es la BaseRate de la habitación)"
+      range:
+        - 45.0
+        - 350.0
+
+    - name: EstadoReserva
+      type: string
+      description: "Estado de la reserva"
+      weighted_values:
+        - {value: "Checked-Out", weight: 0.62}
+        - {value: "Confirmada", weight: 0.15}
+        - {value: "Cancelada", weight: 0.12}
+        - {value: "In-House", weight: 0.06}
+        - {value: "No-Show", weight: 0.05}
+
+    - name: MetodoPago
+      type: string
+      description: "Método de pago (recupera analítica de pago sin tabla dedicada)"
+      weighted_values:
+        - {value: "Tarjeta", weight: 0.70}
+        - {value: "Efectivo", weight: 0.18}
+        - {value: "Transferencia", weight: 0.12}
+
+    - name: TieneDesayuno
+      type: bool
+      description: "Incluye desayuno (~50%)"
+      true_ratio: 0.50
+
+    - name: FechaReserva
+      type: date
+      description: "Fecha de booking = FechaEntrada - DiasAnticipacion"
+      calculated:
+        based_on: ["FechaEntrada", "DiasAnticipacion"]
+        formula: "FechaEntrada - timedelta(days=int(DiasAnticipacion))"
+
+    - name: FechaSalida
+      type: date
+      description: "Check-out = FechaEntrada + Noches"
+      calculated:
+        based_on: ["FechaEntrada", "Noches"]
+        formula: "FechaEntrada + timedelta(days=int(Noches))"
+
+    - name: BookingDateKey
+      type: int
+      description: "Clave yyyymmdd de FechaReserva → fechas.DateKey"
+      calculated:
+        based_on: "FechaReserva"
+        formula: "FechaReserva.year * 10000 + FechaReserva.month * 100 + FechaReserva.day"
+
+    - name: CheckInDateKey
+      type: int
+      description: "Clave yyyymmdd de FechaEntrada → fechas.DateKey"
+      calculated:
+        based_on: "FechaEntrada"
+        formula: "FechaEntrada.year * 10000 + FechaEntrada.month * 100 + FechaEntrada.day"
+
+    - name: CheckOutDateKey
+      type: int
+      description: "Clave yyyymmdd de FechaSalida → fechas.DateKey"
+      calculated:
+        based_on: "FechaSalida"
+        formula: "FechaSalida.year * 10000 + FechaSalida.month * 100 + FechaSalida.day"
+
+    - name: MontoHabitacion
+      type: decimal
+      description: "Importe de hospedaje = TarifaNoche * Noches (USD, 2 decimales)"
+      calculated:
+        based_on: ["TarifaNoche", "Noches"]
+        formula: "int(float(TarifaNoche) * int(Noches) * 100 + 0.5) / 100"
+
+    - name: Descuento
+      type: decimal
+      description: "Descuento escalonado (mayoría 0; a veces 10% o 15%)"
+      calculated:
+        based_on: "MontoHabitacion"
+        formula: "int(float(MontoHabitacion) * random.choice([0, 0, 0, 0, 0.10, 0.15]) * 100 + 0.5) / 100"
+
+    - name: MontoTotalHospedaje
+      type: decimal
+      description: "Total de hospedaje = MontoHabitacion - Descuento (no incluye consumos)"
+      calculated:
+        based_on: ["MontoHabitacion", "Descuento"]
+        formula: "float(MontoHabitacion) - float(Descuento)"
+
+    - name: FechaCarga
+      type: date
+      description: "Fecha de carga (metadata)"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, fk, range, weighted_values, bool, calculated"
+  - "LÍMITE: TarifaNoche NO coincide con habitaciones.TarifaBase del IdHabitacion (la FK no trae atributos)."
+  - "LÍMITE: no se evitan sobre-reservas; FechaSalida se calcula aun para Cancelada/No-Show."
+  - "COHERENTE: FechaReserva <= FechaEntrada < FechaSalida siempre (anticipación>=0, Noches>=1)."

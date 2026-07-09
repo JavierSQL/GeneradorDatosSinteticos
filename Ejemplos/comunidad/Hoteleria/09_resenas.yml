@@ -1,0 +1,121 @@
+# =====================================================================
+# La Posada del Lago — 09 · resenas (HECHO · reseña post-estadía)
+# Grano: una reseña. DEPENDE DE: reservas.
+#
+# Decisión de modelo: el huésped se alcanza A TRAVÉS de la reserva (no hay IdHuesped directo,
+# que se contradiría con el huésped real de la reserva al ser ambas FK aleatorias).
+# PuntajeGeneral = promedio redondeado de los 4 subpuntajes.
+# =====================================================================
+dataset:
+  name: resenas
+  description: "2500 reseñas post-estadía con puntajes por dimensión y comentario"
+  rows: 2500
+  schema: PosadaDelLago
+  output: "Files/Data/PosadaDelLago/resenas"
+  columns:
+    - name: IdResena
+      type: int
+      description: "Clave de la reseña (PK)"
+      sequence:
+        start: 1
+        step: 1
+
+    - name: IdReserva
+      type: int
+      description: "FK → reservas.IdReserva (enlace a la estadía; el huésped se llega vía reserva)"
+      fk:
+        source: "Files/Data/PosadaDelLago/reservas/reservas.parquet"
+        column: IdReserva
+
+    - name: FechaResena
+      type: date
+      description: "Fecha en que se dejó la reseña"
+      range:
+        - "2024-04-01"
+        - "2026-10-31"
+
+    - name: CanalResena
+      type: string
+      description: "Plataforma de la reseña"
+      weighted_values:
+        - {value: "Google", weight: 0.30}
+        - {value: "Booking.com", weight: 0.28}
+        - {value: "TripAdvisor", weight: 0.18}
+        - {value: "Encuesta interna", weight: 0.14}
+        - {value: "Directo", weight: 0.10}
+
+    - name: PuntajeLimpieza
+      type: int
+      description: "Puntaje de limpieza (1-5, sesgo alto)"
+      weighted_values:
+        - {value: 5, weight: 0.45}
+        - {value: 4, weight: 0.30}
+        - {value: 3, weight: 0.15}
+        - {value: 2, weight: 0.07}
+        - {value: 1, weight: 0.03}
+
+    - name: PuntajeServicio
+      type: int
+      description: "Puntaje de servicio (1-5)"
+      weighted_values:
+        - {value: 5, weight: 0.42}
+        - {value: 4, weight: 0.31}
+        - {value: 3, weight: 0.16}
+        - {value: 2, weight: 0.08}
+        - {value: 1, weight: 0.03}
+
+    - name: PuntajeUbicacion
+      type: int
+      description: "Puntaje de ubicación (1-5, muy alto: es a la orilla del lago)"
+      weighted_values:
+        - {value: 5, weight: 0.55}
+        - {value: 4, weight: 0.28}
+        - {value: 3, weight: 0.11}
+        - {value: 2, weight: 0.04}
+        - {value: 1, weight: 0.02}
+
+    - name: PuntajeRelacionValor
+      type: int
+      description: "Puntaje relación calidad-precio (1-5)"
+      weighted_values:
+        - {value: 5, weight: 0.35}
+        - {value: 4, weight: 0.33}
+        - {value: 3, weight: 0.20}
+        - {value: 2, weight: 0.08}
+        - {value: 1, weight: 0.04}
+
+    - name: Comentario
+      type: string
+      description: "Comentario libre (NULL ~40%)"
+      faker: sentence
+      nullable: 0.40
+
+    - name: RespuestaHotel
+      type: string
+      description: "Respuesta del hotel (NULL ~60%)"
+      faker: sentence
+      nullable: 0.60
+
+    - name: Recomendaria
+      type: bool
+      description: "¿Recomendaría el hotel? (~80% sí)"
+      true_ratio: 0.80
+
+    - name: PuntajeGeneral
+      type: int
+      description: "Promedio redondeado de los 4 subpuntajes (1-5)"
+      calculated:
+        based_on: ["PuntajeLimpieza", "PuntajeServicio", "PuntajeUbicacion", "PuntajeRelacionValor"]
+        formula: "int((PuntajeLimpieza + PuntajeServicio + PuntajeUbicacion + PuntajeRelacionValor) / 4 + 0.5)"
+
+    - name: FechaCarga
+      type: date
+      description: "Fecha de carga (metadata)"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, fk, range, weighted_values, faker, bool, nullable, calculated"
+  - "PuntajeGeneral va DESPUÉS de los 4 subpuntajes (calculated)."
+  - "MODELO: sin IdHuesped directo; el huésped se obtiene por join reservas→huespedes."

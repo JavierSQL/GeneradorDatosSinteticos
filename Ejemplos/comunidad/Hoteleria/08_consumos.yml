@@ -1,0 +1,120 @@
+# =====================================================================
+# La Posada del Lago — 08 · consumos (HECHO · línea de folio)
+# Grano: un cargo/consumo dentro de una reserva.
+# DEPENDE DE: reservas, servicios (deben generarse antes).
+#
+# Orden Pass 2: FechaConsumoKey · PrecioUnitario → MontoLinea → Impuesto → MontoTotal.
+# IVA de Costa Rica = 13%.
+# =====================================================================
+dataset:
+  name: consumos
+  description: "22000 líneas de folio (F&B, spa, tours...) con importe e IVA"
+  rows: 22000
+  schema: PosadaDelLago
+  output: "Files/Data/PosadaDelLago/consumos"
+  columns:
+    - name: IdConsumo
+      type: int
+      description: "Clave del consumo (PK)"
+      sequence:
+        start: 1
+        step: 1
+
+    - name: IdReserva
+      type: int
+      description: "FK → reservas.IdReserva"
+      fk:
+        source: "Files/Data/PosadaDelLago/reservas/reservas.parquet"
+        column: IdReserva
+
+    - name: IdServicio
+      type: int
+      description: "FK → servicios.IdServicio"
+      fk:
+        source: "Files/Data/PosadaDelLago/servicios/servicios.parquet"
+        column: IdServicio
+
+    - name: CategoriaConsumo
+      type: string
+      description: "Categoría del consumo (da la banda de precio; coincide con servicios.Categoria)"
+      weighted_values:
+        - {value: "Restaurante y Bar", weight: 0.40}
+        - {value: "Servicio a Habitación", weight: 0.18}
+        - {value: "Spa y Bienestar", weight: 0.15}
+        - {value: "Tours y Actividades", weight: 0.12}
+        - {value: "Transporte", weight: 0.08}
+        - {value: "Lavandería", weight: 0.07}
+
+    - name: FechaConsumo
+      type: date
+      description: "Fecha del consumo (dentro del calendario; no garantizada dentro de la estadía)"
+      range:
+        - "2024-04-01"
+        - "2026-10-14"
+
+    - name: Cantidad
+      type: int
+      description: "Unidades consumidas (1-4)"
+      range:
+        - 1
+        - 4
+
+    - name: FormaCargo
+      type: string
+      description: "Cómo se cobró el consumo"
+      weighted_values:
+        - {value: "Cargo a habitación", weight: 0.65}
+        - {value: "Pago directo", weight: 0.35}
+
+    - name: FechaConsumoKey
+      type: int
+      description: "Clave yyyymmdd de FechaConsumo → fechas.DateKey"
+      calculated:
+        based_on: "FechaConsumo"
+        formula: "FechaConsumo.year * 10000 + FechaConsumo.month * 100 + FechaConsumo.day"
+
+    - name: PrecioUnitario
+      type: decimal
+      description: "Precio unitario en USD, banda según CategoriaConsumo"
+      conditional:
+        based_on: CategoriaConsumo
+        mappings:
+          "Restaurante y Bar":     [8, 12, 18, 25, 35]
+          "Servicio a Habitación": [10, 15, 25, 40]
+          "Spa y Bienestar":       [45, 60, 80, 120]
+          "Tours y Actividades":   [30, 45, 65, 90]
+          "Transporte":            [20, 35, 50, 80]
+          "Lavandería":            [6, 10, 15]
+
+    - name: MontoLinea
+      type: decimal
+      description: "Subtotal = PrecioUnitario * Cantidad (sin IVA)"
+      calculated:
+        based_on: ["PrecioUnitario", "Cantidad"]
+        formula: "int(float(PrecioUnitario) * int(Cantidad) * 100 + 0.5) / 100"
+
+    - name: Impuesto
+      type: decimal
+      description: "IVA 13% (Costa Rica) sobre MontoLinea"
+      calculated:
+        based_on: "MontoLinea"
+        formula: "int(float(MontoLinea) * 0.13 * 100 + 0.5) / 100"
+
+    - name: MontoTotal
+      type: decimal
+      description: "Total con IVA = MontoLinea + Impuesto"
+      calculated:
+        based_on: ["MontoLinea", "Impuesto"]
+        formula: "float(MontoLinea) + float(Impuesto)"
+
+    - name: FechaCarga
+      type: date
+      description: "Fecha de carga (metadata)"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, fk, weighted_values, range, conditional, calculated"
+  - "LÍMITE: PrecioUnitario cuelga de CategoriaConsumo, NO del precio real del IdServicio."
+  - "LÍMITE: FechaConsumo no está garantizada dentro del rango entrada-salida de su reserva."

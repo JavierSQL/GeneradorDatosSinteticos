@@ -1,0 +1,98 @@
+# =====================================================================
+# La Posada del Lago — 06 · servicios (dimensión / catálogo)
+# Grano: un servicio o extra del hotel. FK destino de consumos.
+#
+# Notas de motor:
+#   - Categoria se genera primero (values); NombreServicio/PrecioUnitario/Unidad cuelgan de ella.
+#   - CodigoServicio usa template SIN bloque sequence.
+#   - Las 6 categorías coinciden con CategoriaConsumo en consumos.yml (consistencia de etiquetas).
+# =====================================================================
+dataset:
+  name: servicios
+  description: "25 servicios extra (F&B, spa, tours, transporte, lavandería) con precio y unidad"
+  rows: 25
+  schema: PosadaDelLago
+  output: "Files/Data/PosadaDelLago/servicios"
+  columns:
+    - name: IdServicio
+      type: int
+      description: "Clave del servicio (PK)"
+      sequence:
+        start: 1
+        step: 1
+
+    - name: CodigoServicio
+      type: string
+      description: "Código tipo SRV-001 (template sin sequence propia)"
+      template: "SRV-{sequence:03d}"
+
+    - name: Categoria
+      type: string
+      description: "Categoría del servicio"
+      values:
+        - "Restaurante y Bar"
+        - "Spa y Bienestar"
+        - "Tours y Actividades"
+        - "Servicio a Habitación"
+        - "Transporte"
+        - "Lavandería"
+
+    - name: GravaIVA
+      type: bool
+      description: "El servicio grava IVA (~90%)"
+      true_ratio: 0.90
+
+    - name: Activo
+      type: bool
+      description: "Servicio disponible (~90%)"
+      true_ratio: 0.90
+
+    - name: NombreServicio
+      type: string
+      description: "Nombre del servicio según categoría"
+      conditional:
+        based_on: Categoria
+        mappings:
+          "Restaurante y Bar":     ["Desayuno buffet", "Cena a la carta", "Almuerzo", "Botella de vino", "Cóctel de autor", "Cerveza artesanal", "Café gourmet"]
+          "Spa y Bienestar":       ["Masaje relajante", "Masaje descontracturante", "Facial", "Circuito de aguas", "Aromaterapia", "Sesión de yoga"]
+          "Tours y Actividades":   ["Tour en catamarán", "Kayak en el lago", "Caminata guiada", "Tour de café", "Avistamiento de aves", "Alquiler de bicicleta"]
+          "Servicio a Habitación": ["Room service 24h", "Amenidad romántica", "Late check-out", "Botella de bienvenida"]
+          "Transporte":            ["Traslado aeropuerto", "Alquiler de auto", "Chofer privado", "Parqueo cubierto"]
+          "Lavandería":            ["Lavado y planchado", "Tintorería", "Planchado express"]
+
+    - name: PrecioUnitario
+      type: decimal
+      description: "Precio en USD, banda según categoría"
+      conditional:
+        based_on: Categoria
+        mappings:
+          "Restaurante y Bar":     [8, 12, 18, 25, 35]
+          "Spa y Bienestar":       [45, 60, 80, 120]
+          "Tours y Actividades":   [30, 45, 65, 90]
+          "Servicio a Habitación": [10, 15, 25, 40]
+          "Transporte":            [20, 35, 50, 80]
+          "Lavandería":            [6, 10, 15]
+
+    - name: Unidad
+      type: string
+      description: "Unidad de cobro según categoría"
+      conditional:
+        based_on: Categoria
+        mappings:
+          "Restaurante y Bar":     ["por persona", "por ítem"]
+          "Spa y Bienestar":       ["por servicio", "por persona"]
+          "Tours y Actividades":   ["por persona"]
+          "Servicio a Habitación": ["por servicio"]
+          "Transporte":            ["por servicio"]
+          "Lavandería":            ["por ítem"]
+
+    - name: FechaCarga
+      type: date
+      description: "Fecha de carga (metadata)"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, template, values, bool, conditional"
+  - "Categoria (values) va ANTES de NombreServicio/PrecioUnitario/Unidad (conditional)."

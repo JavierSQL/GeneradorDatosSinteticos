@@ -1,0 +1,132 @@
+# =====================================================================
+# La Posada del Lago — 10 · mantenimiento (HECHO · limpieza/incidencias)
+# Grano: una tarea de limpieza o mantenimiento sobre una habitación.
+# DEPENDE DE: habitaciones, empleados.
+#
+# Notas de motor:
+#   - IdEmpleado es aleatorio entre TODOS los empleados (la FK no filtra por departamento).
+#   - FechaCompletada combina nullable (20% abiertas) + calculated (reporte + 0..7 días).
+#   - Prioridad y CostoMateriales cuelgan de TipoTarea (van después en el YAML).
+# =====================================================================
+dataset:
+  name: mantenimiento
+  description: "5000 tareas de limpieza/mantenimiento por habitación y empleado"
+  rows: 5000
+  schema: PosadaDelLago
+  output: "Files/Data/PosadaDelLago/mantenimiento"
+  columns:
+    - name: IdTarea
+      type: int
+      description: "Clave de la tarea (PK)"
+      sequence:
+        start: 1
+        step: 1
+
+    - name: IdHabitacion
+      type: int
+      description: "FK → habitaciones.IdHabitacion"
+      fk:
+        source: "Files/Data/PosadaDelLago/habitaciones/habitaciones.parquet"
+        column: IdHabitacion
+
+    - name: IdEmpleado
+      type: int
+      description: "FK → empleados.IdEmpleado (asignación aleatoria entre todos los deptos.)"
+      fk:
+        source: "Files/Data/PosadaDelLago/empleados/empleados.parquet"
+        column: IdEmpleado
+
+    - name: TipoTarea
+      type: string
+      description: "Tipo de tarea"
+      weighted_values:
+        - {value: "Limpieza estándar", weight: 0.50}
+        - {value: "Limpieza profunda", weight: 0.15}
+        - {value: "Mantenimiento preventivo", weight: 0.12}
+        - {value: "Reporte de daño", weight: 0.08}
+        - {value: "Reparación plomería", weight: 0.08}
+        - {value: "Reparación eléctrica", weight: 0.07}
+
+    - name: Estado
+      type: string
+      description: "Estado de la tarea"
+      weighted_values:
+        - {value: "Completada", weight: 0.70}
+        - {value: "En Progreso", weight: 0.12}
+        - {value: "Pendiente", weight: 0.12}
+        - {value: "Cancelada", weight: 0.06}
+
+    - name: FechaReporte
+      type: date
+      description: "Fecha en que se reportó/generó la tarea"
+      range:
+        - "2024-01-01"
+        - "2026-12-20"
+
+    - name: DuracionHoras
+      type: decimal
+      description: "Horas dedicadas (NULL ~20% para tareas sin cerrar)"
+      nullable: 0.20
+      range:
+        - 0.5
+        - 8.0
+
+    - name: FechaReporteKey
+      type: int
+      description: "Clave yyyymmdd de FechaReporte → fechas.DateKey"
+      calculated:
+        based_on: "FechaReporte"
+        formula: "FechaReporte.year * 10000 + FechaReporte.month * 100 + FechaReporte.day"
+
+    - name: FechaCompletada
+      type: date
+      description: "Fecha de cierre = FechaReporte + 0..7 días (NULL ~20% tareas abiertas)"
+      nullable: 0.20
+      calculated:
+        based_on: "FechaReporte"
+        formula: "FechaReporte + timedelta(days=random.randint(0, 7))"
+
+    - name: Prioridad
+      type: string
+      description: "Prioridad según tipo de tarea"
+      conditional:
+        based_on: TipoTarea
+        mappings:
+          "Limpieza estándar":        ["Baja", "Media"]
+          "Limpieza profunda":        ["Media"]
+          "Mantenimiento preventivo": ["Baja", "Media"]
+          "Reporte de daño":          ["Baja", "Media", "Alta"]
+          "Reparación plomería":      ["Media", "Alta", "Crítica"]
+          "Reparación eléctrica":     ["Media", "Alta", "Crítica"]
+
+    - name: CostoMateriales
+      type: decimal
+      description: "Costo de materiales en USD según tipo (NULL ~30%)"
+      nullable: 0.30
+      conditional:
+        based_on: TipoTarea
+        mappings:
+          "Limpieza estándar":        [0, 5, 8]
+          "Limpieza profunda":        [10, 15, 20]
+          "Mantenimiento preventivo": [15, 25, 40]
+          "Reporte de daño":          [20, 50, 100]
+          "Reparación plomería":      [30, 60, 90, 120]
+          "Reparación eléctrica":     [40, 80, 150]
+
+    - name: Notas
+      type: string
+      description: "Notas de la tarea (NULL ~50%)"
+      faker: sentence
+      nullable: 0.50
+
+    - name: FechaCarga
+      type: date
+      description: "Fecha de carga (metadata)"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, fk, weighted_values, range, nullable, calculated, conditional, faker"
+  - "LÍMITE: IdEmpleado no está restringido a Limpieza/Mantenimiento (la FK lee todas las claves)."
+  - "nullable+calculated: el motor evalúa nullable primero, luego la fórmula."

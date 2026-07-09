@@ -1,0 +1,106 @@
+# =====================================================================
+# La Posada del Lago — 04 · empleados (dimensión)
+# Grano: un empleado. FK destino de mantenimiento.
+#
+# Notas de motor:
+#   - SalarioMensual en colones (CRC). Puesto depende de Departamento (va después).
+#   - mantenimiento asigna empleados AL AZAR entre todos los departamentos (la FK no filtra).
+# =====================================================================
+dataset:
+  name: empleados
+  description: "60 empleados con departamento, puesto, contrato y turno"
+  rows: 60
+  schema: PosadaDelLago
+  output: "Files/Data/PosadaDelLago/empleados"
+  columns:
+    - name: IdEmpleado
+      type: int
+      description: "Clave sustituta del empleado (PK)"
+      sequence:
+        start: 1
+        step: 1
+
+    - name: NombreCompleto
+      type: string
+      description: "Nombre completo (Faker)"
+      faker: name
+
+    - name: Email
+      type: string
+      description: "Correo corporativo"
+      faker: email
+
+    - name: Telefono
+      type: string
+      description: "Teléfono de contacto"
+      faker: phone_number
+
+    - name: Departamento
+      type: string
+      description: "Departamento del hotel"
+      values:
+        - "Recepción"
+        - "Limpieza"
+        - "Mantenimiento"
+        - "Restaurante"
+        - "Administración"
+        - "Seguridad"
+
+    - name: TipoContrato
+      type: string
+      description: "Tipo de contrato"
+      weighted_values:
+        - {value: "Tiempo Completo", weight: 0.72}
+        - {value: "Medio Tiempo", weight: 0.18}
+        - {value: "Temporal", weight: 0.10}
+
+    - name: Turno
+      type: string
+      description: "Turno laboral"
+      values:
+        - "Mañana"
+        - "Tarde"
+        - "Noche"
+
+    - name: FechaContratacion
+      type: date
+      description: "Fecha de contratación"
+      range:
+        - "2016-01-01"
+        - "2026-05-31"
+
+    - name: SalarioMensual
+      type: int
+      description: "Salario mensual bruto en colones (CRC)"
+      range:
+        - 450000
+        - 2200000
+
+    - name: Activo
+      type: bool
+      description: "Empleado activo (~90%)"
+      true_ratio: 0.90
+
+    - name: Puesto
+      type: string
+      description: "Puesto según departamento"
+      conditional:
+        based_on: Departamento
+        mappings:
+          "Recepción":      ["Recepcionista", "Jefe de Recepción", "Conserje", "Botones"]
+          "Limpieza":       ["Camarera de Pisos", "Supervisor de Limpieza", "Auxiliar de Limpieza"]
+          "Mantenimiento":  ["Técnico de Mantenimiento", "Jefe de Mantenimiento", "Jardinero", "Electricista"]
+          "Restaurante":    ["Mesero", "Chef", "Ayudante de Cocina", "Bartender", "Maître"]
+          "Administración": ["Gerente General", "Contador", "Asistente Administrativo", "Gerente de Ventas"]
+          "Seguridad":      ["Guarda de Seguridad", "Jefe de Seguridad"]
+
+    - name: FechaCarga
+      type: date
+      description: "Fecha de carga (metadata)"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, faker, values, weighted_values, range, bool, conditional"
+  - "Puesto va DESPUÉS de Departamento (conditional)."

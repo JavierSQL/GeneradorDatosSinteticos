@@ -1,0 +1,78 @@
+# =====================================================================
+# La Posada del Lago — 05 · canales (dimensión, valores FORZADOS)
+# Grano: un canal de venta. 6 filas, cada canal exactamente una vez.
+#
+# Truco de forzado (sin bandera nativa en el motor):
+#   sequence genera IdCanal 1..6 → conditional con listas de UN elemento clava el nombre.
+#   random.choice(["Directo Web"]) siempre devuelve ese valor. Verificado.
+#   TipoCanal y ComisionPorcentaje cuelgan de NombreCanal (van después en el YAML).
+# =====================================================================
+dataset:
+  name: canales
+  description: "6 canales de venta con tipo y comisión (valores forzados vía sequence+conditional)"
+  rows: 6
+  schema: PosadaDelLago
+  output: "Files/Data/PosadaDelLago/canales"
+  columns:
+    - name: IdCanal
+      type: int
+      description: "Clave del canal (PK). Motor del forzado."
+      sequence:
+        start: 1
+        step: 1
+
+    - name: NombreCanal
+      type: string
+      description: "Nombre del canal — forzado 1:1 por IdCanal"
+      conditional:
+        based_on: IdCanal
+        mappings:
+          1: ["Directo Web"]
+          2: ["Directo Teléfono"]
+          3: ["Booking.com"]
+          4: ["Expedia"]
+          5: ["Agencia de Viajes"]
+          6: ["Walk-in"]
+
+    - name: TipoCanal
+      type: string
+      description: "Clasificación: Directo / OTA / Offline"
+      conditional:
+        based_on: NombreCanal
+        mappings:
+          "Directo Web":       ["Directo"]
+          "Directo Teléfono":  ["Directo"]
+          "Booking.com":       ["OTA"]
+          "Expedia":           ["OTA"]
+          "Agencia de Viajes": ["Offline"]
+          "Walk-in":           ["Offline"]
+
+    - name: ComisionPorcentaje
+      type: decimal
+      description: "Comisión % (0 directo · 15-18 OTA · ~10 agencia)"
+      conditional:
+        based_on: NombreCanal
+        mappings:
+          "Directo Web":       [0.0]
+          "Directo Teléfono":  [0.0]
+          "Booking.com":       [15.0, 16.0, 18.0]
+          "Expedia":           [15.0, 17.0, 18.0]
+          "Agencia de Viajes": [8.0, 10.0, 12.0]
+          "Walk-in":           [0.0]
+
+    - name: Activo
+      type: bool
+      description: "Canal activo (~95%). Al azar sobre 6 filas; forzar con conditional si se quiere."
+      true_ratio: 0.95
+
+    - name: FechaCarga
+      type: date
+      description: "Fecha de carga (metadata)"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, conditional, bool, range"
+  - "FORZADO: NombreCanal 1:1 con IdCanal → aparecen los 6 canales, cada uno una vez."
+  - "Orden Pass 2: IdCanal(P1) → NombreCanal → TipoCanal/ComisionPorcentaje."

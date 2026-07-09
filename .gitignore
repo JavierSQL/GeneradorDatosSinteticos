@@ -12,6 +12,10 @@ Ejemplos/libro/
 REVIEW.md
 CODE_REVIEW.md
 EDGE_CASES.md
+ISSUES_GENERADOR.md
+
+# Instrucciones internas de Claude Code
+CLAUDE.md
 
 # Python
 __pycache__/

@@ -1,0 +1,135 @@
+# =====================================================================
+# La Posada del Lago — 02 · habitaciones (dimensión)
+# Grano: una habitación física. Incluye el tipo y su tarifa base (des-normalizado → estrella).
+# ORDEN DE GENERACIÓN: temprano (no depende de nadie). FK destino de reservas y mantenimiento.
+#
+# Notas de motor:
+#   - NumeroHabitacion usa template SIN bloque sequence (evita que sequence gane prioridad).
+#   - Capacidad/TarifaBase/MetrosCuadrados dependen de TipoHabitacion (van después en el YAML).
+# =====================================================================
+dataset:
+  name: habitaciones
+  description: "70 habitaciones con tipo, capacidad, tarifa base y vista al lago"
+  rows: 70
+  schema: PosadaDelLago
+  output: "Files/Data/PosadaDelLago/habitaciones"
+  columns:
+    - name: IdHabitacion
+      type: int
+      description: "Clave sustituta de la habitación (PK)"
+      sequence:
+        start: 1
+        step: 1
+
+    - name: NumeroHabitacion
+      type: string
+      description: "Código visible tipo H-001 (template sin sequence propia)"
+      template: "H-{sequence:03d}"
+
+    - name: Piso
+      type: int
+      description: "Piso (1-5)"
+      range:
+        - 1
+        - 5
+
+    - name: TipoHabitacion
+      type: string
+      description: "Tipo de habitación"
+      values:
+        - "Individual"
+        - "Doble"
+        - "Doble Superior"
+        - "Familiar"
+        - "Junior Suite"
+        - "Suite"
+        - "Suite Lago"
+        - "Cabaña"
+
+    - name: Vista
+      type: string
+      description: "Vista predominante (mayoría al lago)"
+      weighted_values:
+        - {value: "Lago", weight: 0.40}
+        - {value: "Jardín", weight: 0.25}
+        - {value: "Montaña", weight: 0.15}
+        - {value: "Piscina", weight: 0.12}
+        - {value: "Interior", weight: 0.08}
+
+    - name: TieneBalcon
+      type: bool
+      description: "Tiene balcón (~60%)"
+      true_ratio: 0.60
+
+    - name: Estado
+      type: string
+      description: "Estado operativo de la habitación"
+      weighted_values:
+        - {value: "Disponible", weight: 0.70}
+        - {value: "Ocupada", weight: 0.18}
+        - {value: "Mantenimiento", weight: 0.08}
+        - {value: "Fuera de Servicio", weight: 0.04}
+
+    - name: FechaUltimaRenovacion
+      type: date
+      description: "Última renovación (NULL ~30%, aún sin renovar)"
+      nullable: 0.30
+      range:
+        - "2018-01-01"
+        - "2025-06-30"
+
+    - name: Capacidad
+      type: int
+      description: "Huéspedes máximos según tipo"
+      conditional:
+        based_on: TipoHabitacion
+        mappings:
+          "Individual":     [1]
+          "Doble":          [2]
+          "Doble Superior": [2]
+          "Familiar":       [3, 4]
+          "Junior Suite":   [2, 3]
+          "Suite":          [2, 3, 4]
+          "Suite Lago":     [2, 3, 4]
+          "Cabaña":         [4, 5]
+
+    - name: TarifaBase
+      type: decimal
+      description: "Tarifa base por noche en USD, según tipo"
+      conditional:
+        based_on: TipoHabitacion
+        mappings:
+          "Individual":     [55, 60, 65]
+          "Doble":          [80, 90, 95]
+          "Doble Superior": [110, 120, 130]
+          "Familiar":       [140, 150, 165]
+          "Junior Suite":   [170, 185, 200]
+          "Suite":          [210, 240, 260]
+          "Suite Lago":     [290, 320, 350]
+          "Cabaña":         [180, 210, 240]
+
+    - name: MetrosCuadrados
+      type: int
+      description: "Superficie en m2, según tipo"
+      conditional:
+        based_on: TipoHabitacion
+        mappings:
+          "Individual":     [18, 20, 22]
+          "Doble":          [24, 26, 28]
+          "Doble Superior": [30, 32, 35]
+          "Familiar":       [38, 42, 45]
+          "Junior Suite":   [40, 45, 50]
+          "Suite":          [55, 60, 70]
+          "Suite Lago":     [65, 75, 85]
+          "Cabaña":         [50, 60, 70]
+
+    - name: FechaCarga
+      type: date
+      description: "Fecha de carga (metadata)"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, template, range, values, weighted_values, bool, nullable, conditional"
+  - "TarifaBase real vive aquí; en reservas la tarifa es un rango plausible (la FK no trae atributos)."

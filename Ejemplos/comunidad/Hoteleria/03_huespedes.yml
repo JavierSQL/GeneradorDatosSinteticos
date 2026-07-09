@@ -1,0 +1,108 @@
+# =====================================================================
+# La Posada del Lago — 03 · huespedes (dimensión)
+# Grano: un huésped. FK destino de reservas.
+#
+# Notas de motor:
+#   - Documento usa faker: nif (equivalente al DNI para persona física en es_ES;
+#     'dni' NO existe en esta versión de Faker). Alternativas: nie (extranjeros), cif (empresas).
+# =====================================================================
+dataset:
+  name: huespedes
+  description: "2000 huéspedes con nacionalidad, fidelidad y datos de contacto"
+  rows: 2000
+  schema: PosadaDelLago
+  output: "Files/Data/PosadaDelLago/huespedes"
+  columns:
+    - name: IdHuesped
+      type: int
+      description: "Clave sustituta del huésped (PK)"
+      sequence:
+        start: 1
+        step: 1
+
+    - name: NombreCompleto
+      type: string
+      description: "Nombre completo (Faker, locale es_ES)"
+      faker: name
+
+    - name: Documento
+      type: string
+      description: "Documento de identidad (NIF español, equivalente a DNI)"
+      faker: nif
+
+    - name: Email
+      type: string
+      description: "Correo electrónico"
+      faker: email
+
+    - name: Telefono
+      type: string
+      description: "Teléfono de contacto (NULL ~12%)"
+      faker: phone_number
+      nullable: 0.12
+
+    - name: Pais
+      type: string
+      description: "País de origen (mayoría Costa Rica + turismo NA/EU)"
+      weighted_values:
+        - {value: "Costa Rica", weight: 0.40}
+        - {value: "Estados Unidos", weight: 0.20}
+        - {value: "Canadá", weight: 0.08}
+        - {value: "México", weight: 0.07}
+        - {value: "España", weight: 0.06}
+        - {value: "Alemania", weight: 0.05}
+        - {value: "Panamá", weight: 0.04}
+        - {value: "Reino Unido", weight: 0.04}
+        - {value: "Otros", weight: 0.06}
+
+    - name: Ciudad
+      type: string
+      description: "Ciudad de residencia (Faker)"
+      faker: city
+
+    - name: FechaNacimiento
+      type: date
+      description: "Fecha de nacimiento"
+      range:
+        - "1950-01-01"
+        - "2006-12-31"
+
+    - name: Genero
+      type: string
+      description: "Género"
+      weighted_values:
+        - {value: "Femenino", weight: 0.49}
+        - {value: "Masculino", weight: 0.48}
+        - {value: "Prefiere no decir", weight: 0.03}
+
+    - name: NivelFidelidad
+      type: string
+      description: "Nivel del programa de fidelidad"
+      weighted_values:
+        - {value: "Ninguno", weight: 0.55}
+        - {value: "Plata", weight: 0.25}
+        - {value: "Oro", weight: 0.14}
+        - {value: "Platino", weight: 0.06}
+
+    - name: FechaRegistro
+      type: date
+      description: "Fecha de alta en el sistema"
+      range:
+        - "2019-01-01"
+        - "2026-06-30"
+
+    - name: AceptaMarketing
+      type: bool
+      description: "Consintió comunicaciones de marketing (~60%)"
+      true_ratio: 0.60
+
+    - name: FechaCarga
+      type: date
+      description: "Fecha de carga (metadata)"
+      range:
+        - "2025-01-01"
+        - "2025-01-01"
+
+notes:
+  - "GENERADORES: sequence, faker, weighted_values, range, bool, nullable"
+  - "Documento (nif) puede repetirse con baja probabilidad; no se valida unicidad (no es sequence)."
